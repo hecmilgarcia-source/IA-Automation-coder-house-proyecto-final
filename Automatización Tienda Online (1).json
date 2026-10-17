@@ -1,0 +1,1255 @@
+{
+  "name": "Automatización Tienda Online",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "maxResults": 5,
+        "filters": {}
+      },
+      "id": "170c681c-b43b-4fb0-b647-9e79943bc07e",
+      "name": "Correo Recibido",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1104,
+        192
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sc1ZoumLGChBgy9v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d820fbdd-5ff2-4b4b-b94f-48449c99f612",
+              "name": "Inicio",
+              "value": "=   {{ $now.toMillis() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "25542161-7b1a-4b17-a906-9d5efe77407e",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -880,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un agente de IA especializado en clasificar correos electrónicos recibidos en la bandeja de entrada de una tienda en línea.\n\nTAREA:\nLee el contenido completo del correo recibido (remitente, asunto y cuerpo del mensaje) y clasifícalo en una única categoría: \"Spam\", \"Lead\" o \"Soporte\".\n\nINSTRUCCIONES:\n1. Antes de clasificar, consulta la herramienta de base de conocimiento (RAG) conectada para obtener los criterios oficiales de identificación de cada categoría (Spam, Lead, Soporte). Usa esos criterios como referencia principal para tu decisión.\n2. Analiza el contenido del correo comparándolo con los criterios obtenidos.\n3. Si el correo no calza claramente en \"Lead\" o \"Soporte\" según los criterios, y presenta señales típicas de spam (remitente desconocido, contenido irrelevante al negocio, solicitudes sospechosas, enlaces o adjuntos no solicitados), clasifícalo como \"Spam\".\n4. Si el correo proviene de alguien que muestra interés en productos o servicios sin haber comprado aún (consultas de precios, disponibilidad, condiciones de compra), clasifícalo como \"Lead\".\n5. Si el correo proviene de un cliente que reporta un problema con una compra ya realizada (producto dañado, pedido no entregado, mercancía equivocada, o solicitud de contacto con un agente), clasifícalo como \"Soporte\".\n6. Redacta un mensaje breve y claro explicando por qué elegiste esa clasificación, mencionando la(s) señal(es) específica(s) del correo que respaldan tu decisión.\n7. Extrae la fecha de recepción del correo y la dirección de correo electrónico del remitente.\n\nFORMATO DE RESPUESTA:\nDebes responder únicamente con un objeto JSON válido, sin texto adicional antes o después, siguiendo exactamente esta estructura:\n\n{\n  \"mensaje\": \"Explicación breve de por qué se eligió esta clasificación\",\n  \"clasificacion\": \"Spam\" | \"Lead\" | \"Soporte\",\n  \"fecha\": \"DD/MM/AAAA\",\n  \"correo\": \"dirección de correo electrónico del remitente\"\n}\n\nRESTRICCIONES:\n- No agregues categorías adicionales fuera de \"Spam\", \"Lead\" o \"Soporte\".\n- No inventes información que no esté presente en el correo o en la base de conocimiento.\n- No incluyas enlaces externos ni información ajena al contenido del correo analizado.\n- La respuesta debe ser siempre un JSON válido que cumpla exactamente con la estructura indicada.\n\nEl correo proveniente es: {{ $('Correo Recibido').item.json.From }}\nLa persona que escribe es: {{ $('Correo Recibido').item.json.From }}\nEl mensaje recibido es: {{ $('Correo Recibido').item.json.snippet }}\nLa fecha recibida es: {{ $today }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Eres un agente de IA especializado en clasificar correos electrónicos recibidos en la bandeja de entrada de una tienda en línea. Clasifica cada correo en una única categoría: \"Spam\", \"Lead\" o \"Soporte\", consultando primero la herramienta de base de conocimiento conectada para obtener los criterios oficiales, y responde únicamente con el objeto JSON válido indicado por el parser de salida."
+        }
+      },
+      "id": "3391918a-7bee-41e2-b608-cb12c392be70",
+      "name": "Clasificación BC",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -656,
+        192
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "id": "b9cafc68-c8fc-442b-bd6b-7a611249e5f7",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        -880,
+        400
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Busca información factual en la base privada de conocimientos de Notion. Debe utilizarse antes de generar cualquier respuesta.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "id": "4165f484-7cf2-453f-be54-a0dba77abbce",
+      "name": "Simple Vector Store2",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -640,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-2"
+      },
+      "id": "f95c502f-0611-473c-b00e-0e09e80c89c6",
+      "name": "Embeddings Google Gemini2",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        688
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"mensaje\": \"Respuesta automática de la IA\",\n\t\"clasificacion\": \"Spam, Lead o Soporte\",\n    \"fecha\" : \"31/02/2026\",\n    \"correo\": \"correo electrónico del mensaje recibido\"\n}"
+      },
+      "id": "090fc176-ef8c-44b6-b1e9-224190dbbef2",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -656,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3e765e25-4104-80dd-94dc-000b6c5ce22a",
+          "mode": "list",
+          "cachedResultName": "Registro de respuestas",
+          "cachedResultUrl": "https://app.notion.com/p/3e765e25410480d69a6ed0751d70236a"
+        },
+        "title": "={{ $json.output.fecha && $json.output.fecha.includes(\"/\") ? $json.output.fecha.split(\"/\").reverse().join(\"-\") : $json.output.fecha }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Clasificacion|select",
+              "selectValue": "={{ $json.output.clasificacion }}"
+            },
+            {
+              "key": "Descripcion|title",
+              "title": "={{ $json.output.mensaje }}"
+            },
+            {
+              "key": "Correo electrónico|email",
+              "emailValue": "={{ $json.output.correo }}"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ $json.output.fecha && $json.output.fecha.includes(\"/\") ? $json.output.fecha.split(\"/\").reverse().join(\"-\") : $json.output.fecha }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "36e0222e-197c-48ce-9ee6-97d66c455db9",
+      "name": "Guardar Clasificacion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        -288,
+        192
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.property_clasificacion }}",
+                    "rightValue": "Spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8162482f-c474-47d2-9a23-9f7b5bb0b3b2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Spam"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dfbe6ba5-1947-464f-bf87-ee0e430438b1",
+                    "leftValue": "={{ $json.property_clasificacion }}",
+                    "rightValue": "Lead",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Lead"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "428c6c33-f70b-4bb1-bc7b-0c3d4cd8bfc1",
+                    "leftValue": "={{ $json.property_clasificacion }}",
+                    "rightValue": "Soporte",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Soporte"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1de4f2db-1e8b-4d72-9588-953f2ea92950",
+      "name": "Acciones por clasificacion",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -64,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Correo Recibido').item.json.id }}",
+        "labelIds": [
+          "SPAM"
+        ]
+      },
+      "id": "763c5907-b2eb-4a4a-aa58-f85f0e8d76f1",
+      "name": "Etiquetar como spam",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "webhookId": "8b5286d1-97ba-4646-8f6f-62a234310190",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sc1ZoumLGChBgy9v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3f765e25-4104-8033-a6d3-000b70c9899b",
+          "mode": "list",
+          "cachedResultName": "Log de ejecuciones",
+          "cachedResultUrl": "https://app.notion.com/p/3f765e25410480b1b297de37a83f0d82"
+        },
+        "title": "Registro de KPIs",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Acción|select",
+              "selectValue": "Archivado"
+            },
+            {
+              "key": "Clasificación|select",
+              "selectValue": "={{ $('Clasificación BC').item.json.output.clasificacion }}"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Éxito"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ DateTime.fromFormat(String($('Clasificación BC').item.json.output.fecha || \"\"), \"dd/MM/yyyy\").isValid ? DateTime.fromFormat(String($('Clasificación BC').item.json.output.fecha), \"dd/MM/yyyy\").toISODate() : $now.toISODate() }}"
+            },
+            {
+              "key": "Id del correo|title",
+              "title": "={{ $('Correo Recibido').item.json.id }}"
+            },
+            {
+              "key": "Nodo con error|rich_text",
+              "textContent": "No"
+            },
+            {
+              "key": "Tiempo en segundos|number",
+              "numberValue": "={{ ($now.toMillis() - $('Edit Fields').item.json.Inicio) / 1000 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da389dce-ae9d-45b4-ac0d-273c49c0b845",
+      "name": "LOG ejecutar Spam",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A partir del contenido de un correo ya clasificado como \"Lead\", redacta el borrador de una respuesta en lenguaje natural que atienda específicamente la consulta del cliente y lo acerque a completar una compra.\n\nRESTRICCIONES:\n- No inventes información que no esté presente en el correo o en la base de conocimiento.\n- No incluyas enlaces externos ni información ajena al contenido del correo analizado.\n- Sólo responde el mensaje sin texto adicional antes o después.\n\nEl mensaje es el siguiente:  {{ $('Correo Recibido').first().json.snippet }}",
+        "options": {
+          "systemMessage": "=Eres un especialista en marketing y ventas en línea de la tienda, encargado de redactar respuestas a clientes potenciales (leads) que escriben al correo de la tienda.\n\nTAREA:\nA partir del contenido de un correo ya clasificado como \"Lead\", redacta el borrador de una respuesta en lenguaje natural que atienda específicamente la consulta del cliente y lo acerque a completar una compra.\n\nINSTRUCCIONES:\n1. Antes de redactar, consulta la herramienta de base de conocimiento (RAG) conectada para obtener la información relevante que responda a la consulta del cliente (precios, disponibilidad, características de productos, condiciones de envío, políticas de compra, etc.).\n2. Piensa paso a paso antes de escribir la respuesta final:\n   a. Identifica cuál es la consulta principal del cliente (qué producto, servicio o información está buscando).\n   b. Identifica si hay preguntas secundarias o implícitas dentro del mensaje.\n   c. Busca en la base de conocimiento la información necesaria para responder cada punto identificado.\n   d. Organiza la información encontrada de forma lógica, priorizando lo que el cliente preguntó primero.\n   e. Define un cierre que invite al cliente a dar el siguiente paso hacia la compra (por ejemplo, indicarle cómo finalizar el pedido, qué opciones tiene disponibles, o si desea más información).\n3. Redacta la respuesta con un tono profesional, cercano y orientado a resolver la duda del cliente, evitando sonar genérico o automatizado.\n4. La respuesta debe estar directamente relacionada con lo que el cliente preguntó; no agregues información que no haya sido solicitada ni que no provenga de la base de conocimiento.\n5. No incluyas enlaces externos ni datos que no estén respaldados por la información disponible en la base de conocimiento.\n6. Si la base de conocimiento no contiene información suficiente para responder por completo la consulta, redacta la respuesta con lo que sí está disponible y, de forma natural, indica que se ampliará la información en breve.\n\nFORMATO DE SALIDA:\nEntrega únicamente el borrador del mensaje de respuesta en lenguaje natural, listo para ser enviado al cliente, sin explicaciones adicionales ni metadatos."
+        }
+      },
+      "id": "436d7a79-c501-4398-8693-1d0168444d6d",
+      "name": "Generar Respuesta a Lead",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "id": "848dab4b-d8e8-4473-a43a-fd003f2b1762",
+      "name": "Anthropic Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        208,
+        368
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Busca información factual en la base privada de conocimientos de Notion. Debe utilizarse antes de generar cualquier respuesta.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "id": "0ff54272-5eed-4dfd-9012-ffc4d5791ae6",
+      "name": "Simple Vector Store3",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-2"
+      },
+      "id": "26702df3-a21f-4d5b-a3d6-6c069034b5cb",
+      "name": "Embeddings Google Gemini3",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        352,
+        512
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Guardar Clasificacion').first().json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Borrador|rich_text",
+              "textContent": "={{ $('Generar Respuesta a Lead').item.json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9ca6bd7e-383a-4a9b-bf1c-b5170c7ceb1f",
+      "name": "Actualizar BD Respuestas",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        608,
+        192
+      ],
+      "retryOnFail": true,
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C1PTSVCP7",
+          "mode": "list",
+          "cachedResultName": "coder",
+          "cachedResultUrl": ""
+        },
+        "message": "=Nuevo lead! Se creó el borrador de la respuesta automática: \n\n{{ $('Generar Respuesta a Lead').first().json.output }}\n\n¿Deseas aprobar el envío del mensaje?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "captureResponder": true,
+        "approvers": [
+          "U0C1SKLJRL6"
+        ],
+        "options": {}
+      },
+      "id": "6d59497c-042e-495e-81f8-88052dea6d41",
+      "name": "Solicitar aprobacion de respuesta",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        832,
+        192
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "webhookId": "14768af7-e24e-4dad-92ef-bd37bddaa59c",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "S7DstwLq8tWQDF2O",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Actualizar BD Respuestas').item.json['property_correo_electrónico'] }}",
+        "subject": "=Re:  {{ $('Correo Recibido').first().json.Subject }}",
+        "message": "={{ $('Actualizar BD Respuestas').item.json.property_borrador }}",
+        "options": {}
+      },
+      "id": "540cc8a2-0f44-4150-ae3a-893fb4e6ebb1",
+      "name": "Enviar mensaje a Lead",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        192
+      ],
+      "webhookId": "d64c5bee-8610-4a95-b0bc-bf89189e4b5c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sc1ZoumLGChBgy9v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3f765e25-4104-8033-a6d3-000b70c9899b",
+          "mode": "list",
+          "cachedResultName": "Log de ejecuciones",
+          "cachedResultUrl": "https://app.notion.com/p/3f765e25410480b1b297de37a83f0d82"
+        },
+        "title": "Registro de KPIs",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Acción|select",
+              "selectValue": "Borrador"
+            },
+            {
+              "key": "Clasificación|select",
+              "selectValue": "={{ $('Clasificación BC').first().json.output.clasificacion }}"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Éxito"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ DateTime.fromFormat(String($('Clasificación BC').first().json.output.fecha || \"\"), \"dd/MM/yyyy\").isValid ? DateTime.fromFormat(String($('Clasificación BC').first().json.output.fecha), \"dd/MM/yyyy\").toISODate() : $now.toISODate() }}"
+            },
+            {
+              "key": "Id del correo|title",
+              "title": "={{ $('Correo Recibido').first().json.id }}"
+            },
+            {
+              "key": "Nodo con error|rich_text",
+              "textContent": "No"
+            },
+            {
+              "key": "Tiempo en segundos|number",
+              "numberValue": "={{ ($now.toMillis() - $('Edit Fields').first().json.Inicio) / 1000 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "404ef555-3c88-4cd7-aa85-0f084a807e15",
+      "name": "LOG Solicitud Aprobacion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1248,
+        192
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Correo Recibido').item.json.From }}",
+        "subject": "=Re:  {{ $('Correo Recibido').item.json.Subject }}",
+        "message": "¡Hola! Tu mensaje ha sido registrado en nuestro sistema. Muy pronto un agente se pondrá en contacto contigo para dar solución a tu caso. Gracias por contactarnos.",
+        "options": {}
+      },
+      "id": "f4c9020f-a566-4b94-8d83-291eeb235426",
+      "name": "Respuesta derivacion soporte",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        688
+      ],
+      "webhookId": "23091408-4acc-46da-8512-fd6fa23d67b1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Sc1ZoumLGChBgy9v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C1PTSVCP7",
+          "mode": "list",
+          "cachedResultName": "coder",
+          "cachedResultUrl": ""
+        },
+        "text": "=¡Un nuevo caso de soporte ha sido creado! Este es el análisis inicial:  {{ $('Guardar Clasificacion').item.json.property_descripcion }}",
+        "otherOptions": {}
+      },
+      "id": "56979baa-6feb-4bd4-b4e3-e1c705f92e12",
+      "name": "Notificar Soporte Cliente",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        368,
+        688
+      ],
+      "webhookId": "bfebc37f-9f72-4462-9356-7a6a859547f4",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "S7DstwLq8tWQDF2O",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3f765e25-4104-8033-a6d3-000b70c9899b",
+          "mode": "list",
+          "cachedResultName": "Log de ejecuciones",
+          "cachedResultUrl": "https://app.notion.com/p/3f765e25410480b1b297de37a83f0d82"
+        },
+        "title": "Registro de KPIs",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Acción|select",
+              "selectValue": "Alerta Slack"
+            },
+            {
+              "key": "Clasificación|select",
+              "selectValue": "={{ $('Clasificación BC').item.json.output.clasificacion }}"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Éxito"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ DateTime.fromFormat(String($('Clasificación BC').item.json.output.fecha || \"\"), \"dd/MM/yyyy\").isValid ? DateTime.fromFormat(String($('Clasificación BC').item.json.output.fecha), \"dd/MM/yyyy\").toISODate() : $now.toISODate() }}"
+            },
+            {
+              "key": "Id del correo|title",
+              "title": "={{ $('Correo Recibido').item.json.id }}"
+            },
+            {
+              "key": "Nodo con error|rich_text",
+              "textContent": "No"
+            },
+            {
+              "key": "Tiempo en segundos|number",
+              "numberValue": "={{ ($now.toMillis() - $('Edit Fields').item.json.Inicio) / 1000 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7db9d15-a37f-4438-9a5f-242aa73379f6",
+      "name": "LOG Soporte Cliente",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        576,
+        688
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "2dd92a9e-9318-40eb-bbe5-d4f278f6e32e",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C1PTSVCP7",
+          "mode": "list",
+          "cachedResultName": "coder"
+        },
+        "text": "=Ocurrió un error intentando procesar un email entrante:  {{ $json.execution.error.message }}",
+        "otherOptions": {}
+      },
+      "id": "88d58c39-a608-47ef-8ad7-4acb852497b2",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        -880,
+        960
+      ],
+      "webhookId": "bc338110-fe9b-4811-9c26-d5021e580be6",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "S7DstwLq8tWQDF2O",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3f765e25-4104-8033-a6d3-000b70c9899b",
+          "mode": "list",
+          "cachedResultName": "Log de ejecuciones",
+          "cachedResultUrl": "https://app.notion.com/p/3f765e25410480b1b297de37a83f0d82"
+        },
+        "title": "Registro de KPIs",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Acción|select",
+              "selectValue": "Alerta Slack"
+            },
+            {
+              "key": "Clasificación|select",
+              "selectValue": "Soporte"
+            },
+            {
+              "key": "Estado|select",
+              "selectValue": "Error"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Id del correo|title",
+              "title": "NA"
+            },
+            {
+              "key": "Nodo con error|rich_text",
+              "textContent": "Si"
+            },
+            {
+              "key": "Tiempo en segundos|number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "58272b36-314b-455f-b7e1-5ed14248aeee",
+      "name": "Create a database page4",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        -688,
+        960
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "oAuth2",
+        "event": "pagedUpdatedInDatabase",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3e765e25-4104-807a-b337-000b4896cbee",
+          "mode": "list",
+          "cachedResultName": "BC tienda online",
+          "cachedResultUrl": "https://app.notion.com/p/3e765e25410480508562f4affba313f1"
+        }
+      },
+      "id": "90e5b440-eed0-4c01-aef6-007f168ac4dc",
+      "name": "Trigger Actualizar BC",
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1104,
+        1264
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3e765e25-4104-807a-b337-000b4896cbee",
+          "mode": "list",
+          "cachedResultName": "BC tienda online",
+          "cachedResultUrl": "https://app.notion.com/p/3e765e25410480508562f4affba313f1"
+        },
+        "options": {}
+      },
+      "id": "f35c7f5f-558a-431f-a4e9-21230dde43ba",
+      "name": "Leer registros de BC",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        -880,
+        1264
+      ],
+      "retryOnFail": true,
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "xa48XdKxCMWlt2Lp",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "value": "vector_store_key",
+          "mode": "list",
+          "cachedResultName": "vector_store_key"
+        },
+        "clearStore": true
+      },
+      "id": "876f46f2-0e94-43a0-8b7c-b63f19b36859",
+      "name": "Simple Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -656,
+        1264
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "22226b95-531b-4b05-ad6f-37cc66f2ceef",
+      "name": "Embeddings Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        1488
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.property_contenido }}",
+        "options": {}
+      },
+      "id": "408e888c-209e-4c82-bd55-0c4be82b9291",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        1488
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Correo Recibido": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Clasificación BC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificación BC": {
+      "main": [
+        [
+          {
+            "node": "Guardar Clasificacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Clasificación BC",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Clasificación BC",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Clasificación BC",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Clasificacion": {
+      "main": [
+        [
+          {
+            "node": "Acciones por clasificacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acciones por clasificacion": {
+      "main": [
+        [
+          {
+            "node": "Etiquetar como spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar Respuesta a Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta derivacion soporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etiquetar como spam": {
+      "main": [
+        [
+          {
+            "node": "LOG ejecutar Spam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Respuesta a Lead": {
+      "main": [
+        [
+          {
+            "node": "Actualizar BD Respuestas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generar Respuesta a Lead",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store3": {
+      "ai_tool": [
+        [
+          {
+            "node": "Generar Respuesta a Lead",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store3",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar BD Respuestas": {
+      "main": [
+        [
+          {
+            "node": "Solicitar aprobacion de respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solicitar aprobacion de respuesta": {
+      "main": [
+        [
+          {
+            "node": "Enviar mensaje a Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar mensaje a Lead": {
+      "main": [
+        [
+          {
+            "node": "LOG Solicitud Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta derivacion soporte": {
+      "main": [
+        [
+          {
+            "node": "Notificar Soporte Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Soporte Cliente": {
+      "main": [
+        [
+          {
+            "node": "LOG Soporte Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Create a database page4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Actualizar BC": {
+      "main": [
+        [
+          {
+            "node": "Leer registros de BC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer registros de BC": {
+      "main": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "60ef4747-82b9-47d9-aa91-22dfacc18e9d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "025ddbe07c6be299082c21ab95422484030d141822f57ce730f020c472aa54c2"
+  },
+  "nodeGroups": [],
+  "id": "cAZ2N9G5qWYayil9",
+  "tags": []
+}
